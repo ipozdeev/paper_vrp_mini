@@ -2,9 +2,8 @@ import pandas as pd
 import numpy as np
 import re
 
-from covariance import CovarianceDataFrame
-
-path_to_hangar = "/paper_vrp_hangar.h5"
+from paper_vrp_mini.covariance import CovarianceDataFrame
+from paper_vrp_mini.strategy import *
 
 
 class ResearchData:
@@ -154,7 +153,9 @@ class ResearchData:
 
 
 class ResearchUniverse:
-    """Research universe representation
+    """Research universe representation.
+
+    For a particular sample of currencies and a particular counter currency.
 
     Parameters
     ----------
@@ -165,7 +166,9 @@ class ResearchUniverse:
     counter_currency : str
         3-letter ISO, e.g. 'aud'
     s_dt : str
+        date to start the sample period at
     e_dt : str
+        date to end the sample period at
 
     """
     def __init__(self, research_data, currencies, counter_currency,
@@ -180,10 +183,18 @@ class ResearchUniverse:
         self.s_dt = s_dt
         self.e_dt = e_dt
 
-        self.universe = "uni_" + '_'.join(self.currencies)
+        # self.universe = "uni_" + '_'.join(self.currencies)
 
         # cache
         self.cache = dict()
+
+    def get(self, *args, **kwargs):
+        """Get data from hangar (pass to ResearchData.get)."""
+        return self.research_data.get(*args, **kwargs)
+
+    def store(self, *args, **kwargs):
+        """Store data to hangar (pass to ResearchData.get)."""
+        return self.research_data.store(*args, **kwargs)
 
     def get_mfiv(self, horizon):
         """Fetch MFIV from the HDFStore, retaining only certain currencies.
@@ -258,21 +269,39 @@ class ResearchUniverse:
 
         return mficov
 
-    def get(self, *args, **kwargs):
-        """Get data from hangar."""
-        return self.research_data.get(*args, **kwargs)
+    def construct_strategy_currency_index(self, rebalancing='B'):
+        """Construct equally-weighted portfolio of currencies in the universe.
 
-    def store(self, *args, **kwargs):
-        """Store data to hangar."""
-        return self.research_data.store(*args, **kwargs)
+        Takes currencies in `self.universe` that are not the
+        `counter_currency` and constructs a static equally-weighted portfolio
+        thereof. Result is an instance of TimeSeriesStrategy with
+        `positions` being a Series with the same equal value for each currency.
+
+        Parameters
+        ----------
+        rebalancing : str
+            rebalancing frequency of the strategy (for naming mostly)
+
+        Returns
+        -------
+        res : TimeSeriesStrategy
+            with pandas.Series of 1/len(universe) for positions
+
+        """
+        res = TimeSeriesStrategy.currency_index(
+            currency=self.counter_currency,
+            universe=self.currencies,
+            rebalancing=rebalancing)
+
+        return res
 
 
 if __name__ == "__main__":
-    h = "c:/Users/Igor/Documents/projects/option_implied_covs/oibp_hangar.h5"
+    h = "c:/Users/Igor/Documents/projects/option_implied_covs" + \
+        "/oibp_hangar_mini.h5"
     hangar = ResearchData(h)
-    # hangar.get(hangar.keys[100])
 
-    currencies = ["aud", "cad", "chf", "eur", "gbp", "jpy", "nzd"]
+    currencies = ["aud", "cad", "chf", "eur", "gbp", "jpy", "nzd", "usd"]
     counter_currency = "usd"
     runi = ResearchUniverse(hangar, currencies, counter_currency,
                             "2006", "2018")
