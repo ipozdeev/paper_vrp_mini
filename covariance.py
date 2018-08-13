@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from helpers import quadratic_form, trim_symmetric_df
+from paper_vrp_mini.helpers import quadratic_form, trim_symmetric_df
 
 
 class CovarianceDataFrame:
