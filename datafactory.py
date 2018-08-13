@@ -1,14 +1,12 @@
-import pandas as pd
+import paper_vrp_mini as research
+from paper_vrp_mini.helpers import vectorize
+from paper_vrp_mini import settings
 
-from helpers import fx_covmat_from_variances
-from core import ResearchData
-
-path_to_hangar = "c:/Users/Igor/Documents/projects/" + \
-    "option_implied_covs/oibp_hangar_mini.h5"
-hangar = ResearchData(path_to_hangar)
+r_data = research.ResearchData(path_to_hangar=settings["path_to_hangar"])
 
 
-def compute_mficov(counter_currency, horizon=1):
+@vectorize
+def compute_mficov(counter_currency, horizon):
     """Compute MFICov matrix from fetched varainces.
 
     MFIV must be stored
@@ -25,21 +23,13 @@ def compute_mficov(counter_currency, horizon=1):
     None
 
     """
-    if isinstance(counter_currency, (list, tuple)):
-        for c in counter_currency:
-            compute_mficov(c, horizon)
-
-    if isinstance(horizon, (list, tuple)):
-        for h in horizon:
-            compute_mficov(counter_currency, h)
-
     horizon_s = str(horizon) + "m"
 
     # fetch MFIV
-    mfiv = hangar.get("mfiv/m" + horizon_s)
+    mfiv = r_data.get("mfiv/m" + horizon_s)
 
     # calculate
-    mficov = fx_covmat_from_variances(mfiv, counter_currency)
+    mficov = research.fx_covmat_from_variances(mfiv, counter_currency)
 
     # sort currencies alphabetically
     mficov = mficov\
@@ -48,8 +38,26 @@ def compute_mficov(counter_currency, horizon=1):
 
     # store as e.g. 'mficov/aud/m3m'
     mficov_key = "mficov/{}/m{}".format(counter_currency, horizon_s)
-    hangar.store({mficov_key: mficov})
+    r_data.store({mficov_key: mficov})
+
+
+@vectorize
+def compute_mfiv_of_currency_index(counter_currency, horizon):
+    """Compute MFIV of a bunch of currency indexes."""
+    # init research universe with that counter currency
+    r_uni = research.ResearchUniverse(research_data=r_data,
+                                      currencies=settings["sample"],
+                                      counter_currency=counter_currency,
+                                      s_dt=settings["s_dt"],
+                                      e_dt=settings["e_dt"])
+
+    currency_idx_strategy = r_uni.construct_strategy_currency_index()
+
+    # compute all the quadratic forms
+    mficov = r_uni.get_mficov(horizon, check_determinant=True)
+    idx_mfiv = mficov.quadratic_form(currency_idx_strategy.positions,
+                                     dropna=True, trim=True, reweight=True)
 
 
 if __name__ == "__main__":
-    compute_mficov(["usd", "aud"], [1, 3])
+    compute_mfiv_of_currency_index(["usd", "aud"], [1, 3])
