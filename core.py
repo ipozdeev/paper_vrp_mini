@@ -186,21 +186,18 @@ class ResearchUniverse:
         self.cache = dict()
 
     def get_mfiv(self, horizon):
-        """
+        """Fetch MFIV from the HDFStore, retaining only certain currencies.
 
         Parameters
         ----------
-        horizon : int or str
-            if int, in months; if str, has format '{:d}m'
+        horizon : int
+            horizon, in months
 
         Returns
         -------
 
         """
-        if isinstance(horizon, int):
-            horizon_s = "{:d}m".format(horizon)
-        else:
-            horizon_s = horizon
+        horizon_s = "{:d}m".format(horizon)
 
         # mfiv
         mfiv_key = "mfiv/m" + horizon_s
