@@ -147,3 +147,121 @@ def quadratic_form(covmat, weights, dropna=False, trim=False, reweight=False):
     res = new_w.dot(new_vcv.dot(new_w))
 
     return res
+
+
+def fx_covmat_from_variances(variances, counter_currency):
+    """Compute covariance matrix of FX log-returns by no-arbitrage argument.
+
+    Given variances of log-changes of all possible cross-exchange rates
+    between N currencies, computes the (N-1)x(N-1) covariance matrix of
+    log-returns of N-1 currencies against a common `counter_currency`.
+
+    Parameters
+    ----------
+    variances : pandas.Series or pandas.DataFrame
+        of variances of appreciation rates, in (frac of 1), columned with a
+        MultiIndex of (base, counter) currencies
+    counter_currency : str
+        3-letter iso e.g. 'usd', denoting the counter currency of returns
+        that the covariance matrix is calcualted for
+
+    Returns
+    -------
+    res : pandas.DataFrame
+        symmetric covariance dataframe if `variances` is a Series,
+        or stacked such dataframes multiindexed by (date, currency) if
+        `variances` is a DataFrame
+
+    """
+    assert isinstance(variances, (pd.Series, pd.DataFrame))
+
+    # if `variances` is a DataFrame, loop over rows
+    if isinstance(variances, pd.DataFrame):
+        # allocate space
+        covmat_dict = dict()
+
+        # loop over time
+        for t, row in variances.iterrows():
+            covmat_dict[t] = fx_covmat_from_variances(row, counter_currency)
+
+        # concat to a DataFrame with MultiIndex
+        res = pd.concat(covmat_dict, axis=0, names=["date", "currency"])\
+            .sort_index(axis=0, level=0, sort_remaining=False)
+
+        return res
+
+    # `variances` is a Series from here -------------------------------------
+    assert isinstance(variances.index, pd.MultiIndex)
+
+    # collect all possible currencies (unique, obviously)
+    currencies = list(set(
+        variances.index.levels[0].tolist() +
+        variances.index.levels[1].tolist()))
+
+    # kick out the counter currency
+    currencies = [c for c in currencies if c != counter_currency]
+
+    # init storage for resulting covariance matrixs
+    res = pd.DataFrame(np.nan, index=currencies, columns=currencies)
+
+    # for the sake of code brevity
+    c = counter_currency
+
+    # loop over currencies
+    for a in currencies:
+        # variance of returns of that currency vs. the coutner currency
+        var_ac = variances.get((a, c), variances.get((c, a), np.nan))
+
+        # loop over the other currencies
+        for b in currencies:
+            if b == a:
+                # if its the same as xxx, just save the above variance
+                res.loc[a, a] = var_ac
+                continue
+
+            # find "xxxyyy" or "yyyxxx"
+            var_ab = variances.get((a, b), variances.get((b, a), np.nan))
+
+            # find "yyyusd" or "usdyyy"
+            var_cb = variances.get((c, b), variances.get((b, c), np.nan))
+
+            # calculate covariance
+            cov_ac_bc = var_triplet_to_cov(var_ab=var_ab,
+                                           var_ac=var_ac,
+                                           var_cb=var_cb)
+
+            # store symmetric covariances
+            res.loc[a, b] = cov_ac_bc
+            res.loc[b, a] = cov_ac_bc
+
+    return res
+
+
+def var_triplet_to_cov(var_ab, var_ac, var_cb):
+    """Calculate covariance and correlation implied by three variances.
+
+    Builds on var[AB] = var[AC] + var[CC] + 2*cov[AC,CB] if
+    AB = AC + CB to extract covariance and correlation between AC and BC (
+    note the change of order).
+
+    Parameters
+    ----------
+    var_ab : float
+        variance of currency pair consisting of base currency A and counter
+        currency B (units of B for one unit of A)
+    var_ac : float
+        variance of currency pair consisting of base currency A and
+        the common counter currency C (units of C for one unit of A)
+    var_cb : float
+        variance of currency pair consisting of base currency B and the
+        common counter currency C (units of B for one unit of C)
+
+    Returns
+    -------
+    res : float
+        implied covariance between AC and BC
+    """
+
+    res = -0.5 * (var_ab - var_ac - var_cb)
+
+    return res
