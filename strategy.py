@@ -1,3 +1,4 @@
+import pandas as pd
 import abc
 import copy
 
@@ -12,7 +13,7 @@ class TradingStrategy:
     rebalancing : str
         frequency of rebalancing (recalculation of signals), e.g. 'B' or 'M',
         may mimicks pandas frequencies
-    positions : pandas.DataFrame
+    positions : pandas.Series or pandas.DataFrame
         of position weights
 
     """
@@ -21,9 +22,13 @@ class TradingStrategy:
         """
         self.name = name.lower()
         self.rebalancing = rebalancing
-        self.positions = positions.dropna(how="all").fillna(0.0)
 
-        self.universe = sorted(self.positions.columns)
+        if isinstance(positions, pd.DataFrame):
+            self.positions = positions.dropna(how="all").fillna(0.0)
+            self.universe = sorted(self.positions.columns)
+        else:
+            self.positions = positions.fillna(0.0)
+            self.universe = sorted(self.positions.index)
 
         # the rest
         for k, v in kwargs.items():
@@ -157,6 +162,50 @@ class TimeSeriesStrategy(TradingStrategy):
                                       self.rebalancing)
 
         return k
+
+    @classmethod
+    def currency_index(cls, currency, universe, rebalancing, date_index=None):
+        """Construct equally-weighted currency index.
+
+        Cunstructs an equally-weighted portfolio of currencies given in
+        `universe`, possibly indexed by `date_index`.
+
+                |aud|eur|
+        2001-01 |0.5|0.5|
+        2001-02 |0.5|0.5|
+
+        Parameters
+        ----------
+        currency : str
+        universe : list-like
+            of str
+        rebalancing : str
+        date_index : list-like
+
+        Returns
+        -------
+        res : TimeSeriesStrategy
+
+        """
+        # make sure `currency` does not enter the universe (else exchange
+        #   rates such as USDUSD can be present
+        universe_x = [c for c in universe if c != currency]
+
+        # construct
+        if date_index is None:
+            positions = pd.Series({c: 1.0 for c in universe_x})
+        else:
+            positions = pd.DataFrame(
+                data=np.ones(shape=(len(date_index), len(universe_x))),
+                index=date_index, columns=universe_x)
+
+        positions /= len(universe_x)
+
+        strategy_name = currency + "_index"
+
+        res = cls(strategy_name, rebalancing, positions)
+
+        return res
 
 
 class LongShortStrategy(TradingStrategy):
