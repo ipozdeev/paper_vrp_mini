@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import itertools
 
 
 def normalize_weights(wght):
@@ -265,3 +266,33 @@ def var_triplet_to_cov(var_ab, var_ac, var_cb):
     res = -0.5 * (var_ab - var_ac - var_cb)
 
     return res
+
+
+def vectorize(func):
+    """Unpack lists in arguments, parsing the content value-by-value."""
+    def wrapper(*args, **kwargs):
+        # transform each argument to list for easier powersetting
+        args_l = ([a] if not isinstance(a, (list, tuple)) else a for a in args)
+
+        # powerset
+        new_args = list(itertools.product(*args_l))
+
+        # transform wach keaword argument to list for easier powersetting
+        kwargs_l = dict()
+        for k, v in kwargs.items():
+            kwargs_l[k] = v if isinstance(v, (list, tuple)) else [v]
+
+        # powerset
+        new_kwargs = [
+            {kk: vv for kk, vv in zip(kwargs_l.keys(), v)}
+            for v in itertools.product(*kwargs_l.values())
+        ]
+
+        # all together
+        new_args_kwargs = itertools.product(new_args, new_kwargs)
+
+        # evaluate function
+        for arg, kwarg in new_args_kwargs:
+            func(*arg, **kwarg)
+
+    return wrapper
