@@ -158,8 +158,8 @@ class TimeSeriesStrategy(TradingStrategy):
         """"""
         universe_str = '_'.join(self.universe)
 
-        k = "{}/uni_{}/reb_{}".format(self.name, universe_str,
-                                      self.rebalancing)
+        k = "{}/uni_{}/reb_{}/".format(self.name, universe_str,
+                                       self.rebalancing)
 
         return k
 
@@ -167,7 +167,7 @@ class TimeSeriesStrategy(TradingStrategy):
     def currency_index(cls, currency, universe, rebalancing, date_index=None):
         """Construct equally-weighted currency index.
 
-        Cunstructs an equally-weighted portfolio of currencies given in
+        Constructs an equally-weighted portfolio of currencies given in
         `universe`, possibly indexed by `date_index`.
 
                 |aud|eur|
@@ -237,9 +237,9 @@ class LongShortStrategy(TradingStrategy):
         """Get the key used to fetch related stuff from the HDFStore."""
         universe_str = '_'.join(self.universe)
 
-        k = "{}/uni_{}/legsize_{}/reb_{}".format(self.name, universe_str,
-                                                 self.legsize,
-                                                 self.rebalancing)
+        k = "{}/uni_{}/legsize_{}/reb_{}/".format(self.name, universe_str,
+                                                  self.legsize,
+                                                  self.rebalancing)
 
         return k
 
