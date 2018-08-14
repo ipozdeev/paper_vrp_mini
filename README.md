@@ -1,2 +1,2 @@
 # paper_vrp_mini
-Select code snippets from my paper on FX variance risk premium
+Python package for replication of (select) results from paper 'Variance risk on the FX market' by Igor Pozdeev.
