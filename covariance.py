@@ -18,13 +18,17 @@ class CovarianceDataFrame:
     def __init__(self, df):
         """
         """
-        assert isinstance(df.index, pd.MultiIndex)
+        df = df.copy()
+
+        if df.index.nlevels < 2:
+            df.index = pd.MultiIndex.from_product(
+                [[pd.to_datetime("1900-01-01")], list(df.index)])
 
         df.index.names = ["date", "asset"]
         df.columns.name = "asset"
 
         # sort
-        df = df.sort_index(axis=0, sort_remaining=False)
+        df = df.sort_index(axis=0, level="date", sort_remaining=False)
 
         # unique dates
         dt_idx = df.index.get_level_values("date").unique()
@@ -32,10 +36,6 @@ class CovarianceDataFrame:
         self.df = df
         self.date_index = dt_idx
         self.assets = df.columns
-
-        # legacy of `self.df`
-        self.index = self.df.index
-        self.columns = self.df.columns
 
     def __getattr__(self, item):
         # Redefine to be able to get attributes from the underlying DataFrame
@@ -93,7 +93,7 @@ class CovarianceDataFrame:
 
         if date_index is not None:
             date_index = pd.MultiIndex.from_product(
-                iterables=[date_index, self.assets],
+                iterables=[list(date_index), list(self.assets)],
                 names=["date", "asset"])
 
             df_reix = df_reix.reindex(index=date_index, **kwargs)
@@ -323,11 +323,12 @@ if __name__ == "__main__":
     df = pd.concat({t: pd.DataFrame(np.eye(4))*t.day
                     for t in pd.date_range("2001-01-01", periods=10)},
                    axis=0)
+    df = pd.DataFrame(np.eye(4))
 
-    df.iloc[5, 3] = np.nan
+    df.iloc[3, 3] = np.nan
     cv_df = CovarianceDataFrame(df)
 
-    # w = pd.Series(np.ones(shape=(4,)) / 4)
-    # cv_df.quadratic_form(other=w)
+    w = pd.Series(np.ones(shape=(4,)) / 4)
+    cv_df.quadratic_form(other=w)
 
     cv_df.get_det(trim=True)
