@@ -202,7 +202,7 @@ def fx_covmat_from_variances(variances, counter_currency):
     # kick out the counter currency
     currencies = [c for c in currencies if c != counter_currency]
 
-    # init storage for resulting covariance matrixs
+    # init storage for resulting covariance matrix
     res = pd.DataFrame(np.nan, index=currencies, columns=currencies)
 
     # for the sake of code brevity
@@ -277,7 +277,7 @@ def vectorize(func):
         # powerset
         new_args = list(itertools.product(*args_l))
 
-        # transform wach keaword argument to list for easier powersetting
+        # transform each keyword argument to list for easier powersetting
         kwargs_l = dict()
         for k, v in kwargs.items():
             kwargs_l[k] = v if isinstance(v, (list, tuple)) else [v]
