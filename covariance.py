@@ -46,6 +46,11 @@ class CovarianceDataFrame:
 
         return res
 
+    def __sub__(self, other):
+        """
+        """
+        return CovarianceDataFrame(self.df.__sub__(other.df))
+
     def get_variances(self):
         """Get the time series of diagonal elements (variances).
 
@@ -100,6 +105,26 @@ class CovarianceDataFrame:
 
         res = CovarianceDataFrame(df_reix)
 
+        return res
+
+    def between(self, start_dt, end_dt):
+        """Subsample the dataframe between two dates.
+
+        Parameters
+        ----------
+        start_dt : str
+        end_dt : str
+
+        Returns
+        -------
+        res : CovarianceDataFrame
+
+        """
+        res = CovarianceDataFrame(
+            self.df\
+            .unstack(level=1).loc[start_dt:end_dt].stack(level=1)\
+            .sort_index()
+        )
         return res
 
     def groupby_time(self):
@@ -301,6 +326,25 @@ class CovarianceDataFrame:
             return aux_res
 
         res = self.groupby_time().apply(det_fun)
+
+        return res
+
+    def shift(self, *args, **kwargs):
+        """Shift the dataframe by a number of time periods.
+
+        Parameters
+        ----------
+        args : any
+        kwargs : any
+            arguments to `pandas.DataFrame.shift`
+
+        Returns
+        -------
+        res : CovMatDataFrame
+
+        """
+        res = self.group_apply(func=lambda x: x.shift(*args, **kwargs),
+                               level="asset")
 
         return res
 
