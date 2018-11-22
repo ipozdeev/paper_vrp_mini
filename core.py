@@ -4,6 +4,7 @@ import numpy as np
 from paper_vrp_mini.covariance import CovarianceDataFrame
 from paper_vrp_mini.strategy import *
 from paper_vrp_mini.database import ResearchData
+from paper_vrp_mini.helpers import maturity_str_to_float
 
 
 class ResearchUniverse:
@@ -36,8 +37,6 @@ class ResearchUniverse:
 
         self.s_dt = s_dt
         self.e_dt = e_dt
-
-        # self.universe = "uni_" + '_'.join(self.currencies)
 
         # cache
         self.cache = dict()
@@ -114,6 +113,9 @@ class ResearchUniverse:
         # reindex
         mficov = CovarianceDataFrame(mficov_df).reindex(assets=self.currencies)
 
+        # subsample
+        mficov = mficov.between(self.s_dt, self.e_dt)
+
         # exclude dates when the determinant was non-positive
         if check_determinant:
             det = mficov.get_det()
@@ -121,10 +123,63 @@ class ResearchUniverse:
 
             mficov.df.loc[(bad_dt, slice(None)), :] *= np.nan
 
-        # to cache
+        # cache
         self.cache["mficov_{}".format(horizon_s)] = mficov
 
         return mficov
+
+    def get_rcov(self, horizon, look="backward"):
+        """Fetch time series of realized covariance matrices.
+
+        For a time t, the matrix is calculated based on the daily returns from
+        time (t-D) to t for look=`backward` or from time (t+1) to (t+D) for
+        look=`forward`, with D being the number of days in period `horizon`.
+
+        Parameters
+        ----------
+        horizon : int or str
+            if int, assumed to be in months
+        look : str
+            'backward' or 'forward'
+
+        Returns
+        -------
+        res : CovarianceDataFrame
+
+        """
+        if isinstance(horizon, int):
+            horizon_s = "{:d}m".format(horizon)
+        else:
+            horizon_s = horizon
+
+        horizon_i = maturity_str_to_float(horizon_s, to_freq="B")
+
+        cached = self.cache.get("rcov_{}".format(horizon_s), None)
+        if cached is not None:
+            return cached
+
+        # fetch from HDFStore, subsample
+        rcov_key = "rcov/{}".format(self.counter_currency, horizon_s)
+        rcov_df = self.get(rcov_key)
+
+        # reindex
+        rcov = CovarianceDataFrame(rcov_df).reindex(assets=self.currencies)
+
+        # average over days
+        rcov = rcov.rolling_apply(func2d=np.nanmean,
+                                  window=horizon_i,
+                                  min_periods=20)
+        # shift?
+        if look.lower() == "forward":
+            rcov = rcov.shift(-horizon_i)
+
+        # subsample
+        rcov = rcov.between(self.s_dt, self.e_dt)
+
+        # cache
+        self.cache["rcov_{}".format(horizon_s)] = rcov
+
+        return rcov
 
     def construct_strategy_currency_index(self, rebalancing='B'):
         """Construct equally-weighted portfolio of currencies in the universe.
@@ -161,5 +216,6 @@ if __name__ == "__main__":
     currencies = ["aud", "cad", "chf", "eur", "gbp", "jpy", "nzd", "usd"]
     counter_currency = "usd"
     runi = ResearchUniverse(hangar, currencies, counter_currency,
-                            "2006", "2018")
-    mficov = runi.get_mficov(horizon=1, check_determinant=True)
+                            "2009-01-14", "2018")
+    # mficov = runi.get_mficov(horizon=1, check_determinant=True)
+    rcov = runi.get_rcov("3m", look="forward")
