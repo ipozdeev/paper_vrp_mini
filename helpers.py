@@ -296,3 +296,38 @@ def vectorize(func):
             func(*arg, **kwarg)
 
     return wrapper
+
+
+def maturity_str_to_float(mat, to_freq='Y'):
+    """Convert maturity to fractions of a period.
+
+    Parameters
+    ----------
+    mat: str
+    to_freq : str
+        character, pandas frequency
+
+    Returns
+    -------
+    res : float
+
+    """
+    if (to_freq.upper() == 'B') and (mat[-1].upper() == 'M'):
+        map_dict = {"1m": 22, "2m": 44, "3m": 64, "4m": 84, "5m": 104,
+                    "6m": 126, "7m": 148, "8m": 170, "9m": 190, "10m": 212,
+                    "11m": 232, "12m": 254}
+        return map_dict[mat]
+
+    scale_matrix = pd.DataFrame(
+        index=['D', 'B', 'Y'],
+        columns=['W', 'M', 'Y'],
+        data=np.array([[1/7, 1/30, 1/365],
+                       [1/5, 1/22, 1/254],
+                       [52, 12, 1]], dtype=float))
+
+    int_part = int(mat[:-1])
+    scale = scale_matrix.loc[to_freq, mat[-1].upper()]
+
+    res = int_part / scale
+
+    return res
