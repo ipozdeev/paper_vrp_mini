@@ -192,7 +192,9 @@ def fx_covmat_from_variances(variances, counter_currency):
         return res
 
     # `variances` is a Series from here -------------------------------------
-    assert isinstance(variances.index, pd.MultiIndex)
+    if not isinstance(variances.index, pd.MultiIndex):
+        raise ValueError("Index of `variances` must be of two levels: base "
+                         "and counter currency.")
 
     # collect all possible currencies (unique, obviously)
     currencies = list(set(
