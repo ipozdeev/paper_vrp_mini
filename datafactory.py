@@ -69,12 +69,13 @@ def compute_mfiv_of_currency_index(counter_currency, horizon):
 
 
 if __name__ == "__main__":
+    pass
     # compute_mfiv_of_currency_index(research.settings["sample"],
     #                                [1, 2, 3, 4, 6, 9, 12])
-    import pandas as pd
-    mficov = hangar.get("mficov/usd/m3m").xs("2015-12-14", axis=0)
-    mficov_c = research.CovarianceDataFrame(mficov)
-    portfolio = pd.Series({"aud": 1 / 3, "nzd": 1 / 3, "cad": 1 / 3,
-                           "jpy": -1 / 3, "chf": -1 / 3, "eur": -1 / 3})
-    portfolio = portfolio.reindex(mficov.columns, fill_value=0.0)
-    mficov_c.quadratic_form(portfolio, trim=True)
+    # import pandas as pd
+    # mficov = hangar.get("mficov/usd/m3m").xs("2015-12-14", axis=0)
+    # mficov_c = research.CovarianceDataFrame(mficov)
+    # portfolio = pd.Series({"aud": 1 / 3, "nzd": 1 / 3, "cad": 1 / 3,
+    #                        "jpy": -1 / 3, "chf": -1 / 3, "eur": -1 / 3})
+    # portfolio = portfolio.reindex(mficov.columns, fill_value=0.0)
+    # mficov_c.quadratic_form(portfolio, trim=True)

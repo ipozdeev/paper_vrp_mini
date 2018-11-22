@@ -79,7 +79,7 @@ class ResearchData:
         return res
 
     def get(self, what=None, get_all=True):
-        """Fetch value  from the HDFStore.
+        """Fetch value from the HDFStore.
 
         Either the key or the whole group as a multiindexed DataFrame.
 
